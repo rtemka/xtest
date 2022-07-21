@@ -17,15 +17,6 @@ func New() *MemDB {
 	return &MemDB{}
 }
 
-// SampleItem можно использовать для тестов
-var SampleItem = item{
-	Id:       1,
-	CharCode: "USD",
-	Nominal:  1,
-	Time:     1658252361,
-	Value:    100,
-}
-
 func (db *MemDB) RUBUSDRate(ctx context.Context) (item, error) {
 	return SampleItem, nil
 }
@@ -51,10 +42,34 @@ func (db *MemDB) BtcRate(_ context.Context, limit, _ int) ([]item, error) {
 
 // FiatsCurrent - no-op
 func (db *MemDB) FiatsCurrent(_ context.Context) ([]item, error) {
-	return nil, nil
+	return []item{SampleItem, SampleItem2, SampleItem3}, nil
 }
 
 // Close - no-op
 func (db *MemDB) Close() error {
 	return nil
+}
+
+// SampleItem можно использовать для тестов
+var SampleItem = item{
+	Id:       1,
+	CharCode: "USD",
+	Nominal:  1,
+	Time:     1658252361,
+	Value:    56.4783,
+}
+
+var SampleItem2 = item{
+	Id:       2,
+	CharCode: "HUF",
+	Nominal:  100,
+	Time:     1658252361,
+	Value:    14.3324,
+}
+var SampleItem3 = item{
+	Id:       3,
+	CharCode: "GBP",
+	Nominal:  1,
+	Time:     1658252361,
+	Value:    67.7627,
 }
