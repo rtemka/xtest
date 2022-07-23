@@ -59,7 +59,7 @@ func (api *API) Router() *mux.Router {
 }
 
 func (api *API) endpoints() {
-	api.r.Use(closerMiddleware, headersMiddleware)
+	api.r.Use(api.logRequestMiddleware, api.closerMiddleware, api.headersMiddleware)
 	api.r.HandleFunc("/api/btcusdt", api.btcusdtLatestHandler).Methods(http.MethodGet, http.MethodOptions)
 	api.r.HandleFunc("/api/btcusdt", api.btcusdtHistoryHandler).Methods(http.MethodPost, http.MethodOptions) // почему POST???
 	api.r.HandleFunc("/api/latest", api.fiatsBTCLatestHandler).Methods(http.MethodGet, http.MethodOptions)
@@ -69,7 +69,7 @@ func (api *API) endpoints() {
 
 // closerMiddleware читает и закрывает тело запроса
 // для переиспользования TCP-соединения.
-func closerMiddleware(next http.Handler) http.Handler {
+func (api *API) closerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
 		_, _ = io.Copy(io.Discard, r.Body)
@@ -78,10 +78,18 @@ func closerMiddleware(next http.Handler) http.Handler {
 }
 
 // headersMiddleware устанавливает хедеры всем ответам.
-func headersMiddleware(next http.Handler) http.Handler {
+func (api *API) headersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// logRequestMiddleware логирует request
+func (api *API) logRequestMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		api.logger.Printf("method=%s, path=%s, query=%s host=%s", r.Method, r.URL.Path, r.URL.Query(), r.Host)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -100,10 +108,7 @@ func (api *API) btcusdtLatestHandler(w http.ResponseWriter, r *http.Request) {
 	if len(latest) == 0 {
 		http.Error(w, "latest rate is not found", http.StatusNotFound)
 	}
-	m := map[string]any{
-		"timestamp": latest[0].Time,
-		"value":     latest[0].Value,
-	}
+	m := domain.RateMapTimestamp(latest)
 	// Отправка данных клиенту в формате JSON.
 	json.NewEncoder(w).Encode(&m)
 }
@@ -163,11 +168,9 @@ func (api *API) fiatsRubLatestHandler(w http.ResponseWriter, r *http.Request) {
 	// Не нашли в БД ничего
 	if len(latest) == 0 {
 		http.Error(w, "latest RUB rates not found", http.StatusNotFound)
+		return
 	}
-	m := make(map[string]any, len(latest))
-	for i := range latest {
-		m[latest[i].CharCode] = latest[i].Value
-	}
+	m := domain.RateMap(latest)
 	// Отправка данных клиенту в формате JSON.
 	json.NewEncoder(w).Encode(&m)
 }
@@ -242,12 +245,8 @@ func (api *API) fiatsBTCLatestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m := make(map[string]any, len(rates))
-	for i := range rates {
-		m[rates[i].CharCode] = rates[i].Value
-	}
 	// Отправка данных клиенту в формате JSON.
-	json.NewEncoder(w).Encode(&m)
+	json.NewEncoder(w).Encode(&rates)
 }
 
 func op(o string) string {
