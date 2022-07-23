@@ -102,6 +102,7 @@ func (api *API) clientHandler(w http.ResponseWriter, r *http.Request) {
 		api.logger.Printf("upgrade: %v", err)
 		return
 	}
+	api.logger.Printf("client connected: %s", c.RemoteAddr())
 
 	api.clients.put(c) // сохраняем соединение
 
@@ -127,6 +128,7 @@ func (api *API) clientHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = c.Close()
 	api.clients.delete(c) // удаляем соединение
+	api.logger.Printf("client disconnected: %s", c.RemoteAddr())
 }
 
 func (api *API) broadcast(message []byte) {
