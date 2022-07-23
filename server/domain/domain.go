@@ -1,4 +1,4 @@
-// domain содержит основные типы с которыми работает сервер
+// domain содержит основные типы с которыми работает сервер.
 package domain
 
 import (
@@ -10,7 +10,7 @@ import (
 // Rate представляет собой обменный курс
 // одной конкретной валюты (по отношению к рублю).
 type Rate struct {
-	Id       int64   `json:"-" xml:"-"`
+	Id       int64   `json:"id" xml:"-"`
 	CharCode string  `json:"char_code,omitempty" xml:"CharCode"`
 	Nominal  int     `json:"nominal,omitempty" xml:"Nominal"`
 	Time     int64   `json:"time" xml:"-"`
@@ -28,7 +28,7 @@ type xmlContainer struct {
 	Items []Rate `xml:">Valute"`
 }
 
-// ToRate - приводит BtcRate к Rate
+// ToRate - приводит BtcRate к Rate.
 func (br *BtcRate) ToRate() Rate {
 	return Rate{
 		Time:  br.Time,
@@ -46,6 +46,7 @@ func (r *Rate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
+// JsonDec - логика десериализации json данных
 func JsonDec(b []byte) ([]Rate, error) {
 	var c = struct {
 		Item BtcRate `json:"data"`
@@ -58,6 +59,7 @@ func JsonDec(b []byte) ([]Rate, error) {
 	return []Rate{c.Item.ToRate()}, nil
 }
 
+// XmlDec - логика десериализации xml данных
 func XmlDec(b []byte) ([]Rate, error) {
 	var c xmlContainer
 	return c.Items, xml.Unmarshal(b, &c)
@@ -90,3 +92,20 @@ func DecodeStream(in <-chan []byte, f func([]byte) ([]Rate, error)) (<-chan []Ra
 
 	return out, errs
 }
+
+// func (r *Rates) marshalJSONCurrLatest() ([]byte, error) {
+// 	m := make(map[string]any, 1)
+// 	m[r.CharCode] = r.Value
+// 	return json.Marshal(m)
+// }
+
+// func (r *Rate) MarshalJSON() ([]byte, error) {
+// 	switch r.Mode {
+// 	case BtcHistory:
+// 		return r.marshalJSONBtcHistory()
+// 	case CurrLatest:
+// 		return r.marshalJSONCurrLatest()
+// 	default:
+// 		return json.Marshal(r)
+// 	}
+// }
