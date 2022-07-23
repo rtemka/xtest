@@ -60,7 +60,7 @@ func TestPostgres(t *testing.T) {
 			t.Fatalf("AddBtcRate() = error: %v", err)
 		}
 
-		got, err := tdb.BtcRate(context.Background(), storage.Filter{Limit: 1, Offset: 2})
+		got, err := tdb.BtcRate(context.Background(), storage.Filter{Limit: 1})
 		if err != nil {
 			t.Fatalf("BtcRate() = error: %v", err)
 		}
@@ -78,7 +78,7 @@ func TestPostgres(t *testing.T) {
 	t.Run("BtcRate", func(t *testing.T) {
 		want := testBtcRate1
 
-		got, err := tdb.BtcRate(context.Background(), storage.Filter{Limit: 1, Offset: 0})
+		got, err := tdb.BtcRate(context.Background(), storage.Filter{Limit: 1, Offset: 2})
 		if err != nil {
 			t.Fatalf("BtcRate() = error: %v", err)
 		}

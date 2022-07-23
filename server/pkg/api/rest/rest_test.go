@@ -5,6 +5,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -30,7 +31,7 @@ type hist struct {
 }
 
 func TestMain(m *testing.M) {
-	api = New(memdb.New(), log.New(os.Stdout, "", 0))
+	api = New(memdb.New(), log.New(io.Discard, "", 0))
 	ts := httptest.NewServer(api.Router())
 	defer ts.Close()
 

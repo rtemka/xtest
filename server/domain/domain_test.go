@@ -82,12 +82,12 @@ func TestRate_UnmarshalJSON(t *testing.T) {
 		Id:       0,
 		CharCode: "",
 		Nominal:  0,
-		Time:     1658237004004,
+		Time:     1658237004,
 		Value:    22278.80,
 	}
 
 	if got.Item.ToRate() != want {
-		t.Fatalf("UnmarshalJSON() = %#v, want %#v", got.Item, want)
+		t.Fatalf("UnmarshalJSON() = %#v, want %#v", got.Item.ToRate(), want)
 	}
 
 }
@@ -140,7 +140,7 @@ func TestDecodeStream(t *testing.T) {
 			Id:       0,
 			CharCode: "",
 			Nominal:  0,
-			Time:     1658237004004,
+			Time:     1658237004,
 			Value:    22278.80,
 		}
 
