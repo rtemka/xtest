@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"xtestserver/domain"
+	"xtestserver/pkg/storage"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -38,12 +40,13 @@ type statement struct {
 	args []any
 }
 
-// AddBtcRate
+// AddBtcRate добавляет в БД текущий курс BTC/USD.
 func (p *Postgres) AddBtcRate(ctx context.Context, rate domain.Rate) error {
 	sql := `INSERT INTO btc_usdt(time, value) VALUES ($1, $2);`
 	return p.exec(ctx, sql, rate.Time, rate.Value)
 }
 
+// AddFiats добавляет в БД текущий курс фиатных валют.
 func (p *Postgres) AddFiats(ctx context.Context, rates ...domain.Rate) error {
 
 	sql := `
@@ -67,16 +70,39 @@ func (p *Postgres) AddFiats(ctx context.Context, rates ...domain.Rate) error {
 	return p.execBatch(ctx, stmts...)
 }
 
-func (p *Postgres) BtcRate(ctx context.Context, limit, offset int) ([]domain.Rate, error) {
-	sql := `
+// BtcRate возвращает курс BTC/USDT. Накладывает на результаты
+// фильтры по дате и пагинации, если есть.
+func (p *Postgres) BtcRate(ctx context.Context, filter storage.Filter) ([]domain.Rate, error) {
+	var stmt statement
+	var limit string
+	if filter.Limit > 0 {
+		limit = "LIMIT $1"
+		stmt.args = append(stmt.args, filter.Limit)
+	}
+	if filter.Time > 0 {
+		stmt.sql = fmt.Sprintf(`
 		SELECT btc.id, btc.time, btc.value
 		FROM btc_usdt as btc 
-		JOIN (SELECT btc_usdt.time FROM btc_usdt LIMIT $1 OFFSET $2) as btc_offset 
-		ON btc.time = btc_offset.time;`
+		JOIN (SELECT btc_usdt.time FROM btc_usdt WHERE btc_usdt.time %s $%d %s OFFSET $%d) 
+		as btc_offset ON btc.time = btc_offset.time;`,
+			filter.Operator, len(stmt.args)+1, limit, len(stmt.args)+2)
+
+		stmt.args = append(stmt.args, filter.Time, filter.Offset)
+	} else {
+		stmt.sql = fmt.Sprintf(`
+		SELECT btc.id, btc.time, btc.value FROM btc_usdt as btc 
+		JOIN (SELECT btc_usdt.time FROM btc_usdt %s OFFSET $%d) as btc_offset 
+		ON btc.time = btc_offset.time;`, limit, len(stmt.args)+1)
+		stmt.args = append(stmt.args, filter.Offset)
+	}
+	return p.btcrate(ctx, stmt.sql, stmt.args...)
+}
+
+func (p *Postgres) btcrate(ctx context.Context, sql string, args ...any) ([]domain.Rate, error) {
 
 	var rates []domain.Rate
 
-	rows, err := p.db.Query(ctx, sql, limit, offset)
+	rows, err := p.db.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,55 +123,83 @@ func (p *Postgres) BtcRate(ctx context.Context, limit, offset int) ([]domain.Rat
 	return rates, rows.Err()
 }
 
+// FiatsCurrent возвращает текущий курс к рублю
+// всех фиатных валют.
 func (p *Postgres) FiatsCurrent(ctx context.Context) ([]domain.Rate, error) {
 	sql := `
-		SELECT
-			rub.id,
-			fiats.char_code, 
-			fiats.nominal, 
-			rub.time, 
-			rub.value	
+		SELECT rub.id, fiats.char_code, fiats.nominal, rub.time, rub.value	
 		FROM rub JOIN (SELECT rub.id FROM rub LIMIT (SELECT COUNT(fiats.char_code) FROM fiats)) 
 		as rub_offset ON rub.id = rub_offset.id
 		JOIN fiats ON rub.char_code = fiats.char_code;`
+	return p.fiats(ctx, sql)
+}
 
-	var rates []domain.Rate
+// Fiats возвращает отфильтрованное по дате, валюте
+// кол-во из таблицы курса фиатных валют.
+func (p *Postgres) Fiats(ctx context.Context, filter storage.Filter) ([]domain.Rate, error) {
+	var stmt statement
 
-	rows, err := p.db.Query(ctx, sql)
+	if filter.Time > 0 {
+		stmt.args = append(stmt.args, filter.Time)
+		stmt.sql = fmt.Sprintf(`
+		SELECT rub.id, fiats.char_code, fiats.nominal, rub.time, rub.value	
+		FROM rub JOIN (SELECT rub.id FROM rub WHERE rub.time %s $1) 
+		as rub_offset ON rub.id = rub_offset.id
+		JOIN fiats ON rub.char_code = fiats.char_code`, filter.Operator)
+		if filter.Currency != "" {
+			stmt.sql += " WHERE fiats.char_code = $2;"
+			stmt.args = append(stmt.args, filter.Currency)
+		}
+	}
+	if filter.Currency != "" && filter.Time == 0 {
+		stmt.args = append(stmt.args, filter.Currency)
+		stmt.sql = `
+			SELECT rub.id, fiats.char_code, fiats.nominal, rub.time, rub.value	
+			FROM (SELECT fiats.char_code, fiats.nominal FROM fiats WHERE fiats.char_code = $1)
+			as fiats JOIN rub ON rub.char_code = fiats.char_code`
+	}
+	if filter.Limit > 0 {
+		stmt.sql = fmt.Sprintf("%s LIMIT $%d", stmt.sql, len(stmt.args)+1)
+		stmt.args = append(stmt.args, filter.Limit)
+	}
+	if filter.Offset > 0 {
+		stmt.sql = fmt.Sprintf("%s OFFSET $%d", stmt.sql, len(stmt.args)+1)
+		stmt.args = append(stmt.args, filter.Offset)
+	}
+
+	return p.fiats(ctx, stmt.sql, stmt.args...)
+}
+
+func (p *Postgres) fiats(ctx context.Context, sql string, args ...any) ([]domain.Rate, error) {
+
+	rows, err := p.db.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	var rates []domain.Rate
 	for rows.Next() {
-
 		var rate domain.Rate
-
 		err := rows.Scan(&rate.Id, &rate.CharCode, &rate.Nominal, &rate.Time, &rate.Value)
 		if err != nil {
 			return nil, err
 		}
-
 		rates = append(rates, rate)
 	}
 
 	return rates, rows.Err()
 }
 
+// RUBUSDRate возвращает текущий курск доллара
 func (p *Postgres) RUBUSDRate(ctx context.Context) (domain.Rate, error) {
 	sql := `
-		SELECT
-			rub.id,
-			fiats.char_code, 
-			fiats.nominal, 
-			rub.time, 
-			rub.value
+		SELECT rub.id, fiats.char_code, fiats.nominal, rub.time, rub.value
 		FROM rub JOIN fiats ON rub.char_code = fiats.char_code 
-		WHERE rub.char_code = $1 ORDER BY rub.time DESC LIMIT 1;`
+		WHERE rub.char_code = 'USD' ORDER BY rub.time DESC LIMIT 1;`
 
 	var rate domain.Rate
-
-	return rate, p.db.QueryRow(ctx, sql, "USD").
+	return rate, p.db.QueryRow(ctx, sql).
 		Scan(&rate.Id, &rate.CharCode, &rate.Nominal, &rate.Time, &rate.Value)
 }
 
@@ -173,7 +227,6 @@ func (p *Postgres) exec(ctx context.Context, sql string, args ...any) error {
 func (p *Postgres) execBatch(ctx context.Context, stmts ...statement) error {
 
 	b := new(pgx.Batch)
-
 	for i := range stmts {
 		b.Queue(stmts[i].sql, stmts[i].args...)
 	}
