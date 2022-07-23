@@ -32,21 +32,21 @@ func (db *MemDB) AddFiats(_ context.Context, _ ...item) error {
 }
 
 // BtcRate - возвращает столько Rate, сколько запрошено
-func (db *MemDB) BtcRate(_ context.Context, limit, _ int) ([]item, error) {
-	items := make([]item, 0, limit)
-	for i := 0; i < limit; i++ {
+func (db *MemDB) BtcRate(_ context.Context, filter storage.Filter) ([]item, error) {
+	items := make([]item, 0, filter.Limit+filter.Offset)
+	for i := 0; i < filter.Limit+filter.Offset; i++ {
 		items = append(items, SampleItem)
 	}
 	return items, nil
 }
 
-// FiatsCurrent - no-op
+// FiatsCurrent - return exactly three items
 func (db *MemDB) FiatsCurrent(_ context.Context) ([]item, error) {
 	return []item{SampleItem, SampleItem2, SampleItem3}, nil
 }
 
-// Fiats - возвращает столько Rate, сколько запрошено в фильтре
-// или просто три элемента
+// Fiats - возвращает столько Rate, сколько запрошено,
+// если нет фильтров, то ровно три
 func (db *MemDB) Fiats(_ context.Context, filter storage.Filter) ([]item, error) {
 	if filter.Limit+filter.Offset == 0 {
 		return []item{SampleItem, SampleItem2, SampleItem3}, nil
