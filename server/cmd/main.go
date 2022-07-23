@@ -16,9 +16,9 @@ import (
 	api "xtestserver/pkg/api/rest"
 	wsapi "xtestserver/pkg/api/websocket"
 	"xtestserver/pkg/poller"
-	"xtestserver/pkg/rates"
 	"xtestserver/pkg/storage"
 	"xtestserver/pkg/storage/postgres"
+	"xtestserver/rates"
 )
 
 // переменная окружения
@@ -45,20 +45,6 @@ var (
 	errLoggerName = fmt.Sprintf("%*s", logIndent, "[ERROR]: ")
 )
 
-// envs собирает ожидаемые переменные окружения,
-// возвращает ошибку, если какая-либо из переменных env не задана.
-func envs(envs ...string) (map[string]string, error) {
-	em := make(map[string]string, len(envs))
-	var ok bool
-	for _, env := range envs {
-		if em[env], ok = os.LookupEnv(env); !ok {
-			log.Println(em[env])
-			return nil, fmt.Errorf("environment variable %q must be set", env)
-		}
-	}
-	return em, nil
-}
-
 func main() {
 
 	em, err := envs(dbConnStrEnv, logfileEnv)
@@ -74,7 +60,7 @@ func main() {
 		_ = logfile.Close()
 	}()
 
-	db, err := postgres.New(em[dbConnStrEnv])
+	db, err := connectDB(em[dbConnStrEnv], 60, time.Second)
 	if err != nil {
 		_ = logfile.Close()
 		log.Fatal(err)
@@ -134,6 +120,36 @@ func cancelation(cancel context.CancelFunc, logout io.Writer, servers []*http.Se
 
 		cancel() // закрываем контекст приложения
 	}()
+}
+
+// envs собирает ожидаемые переменные окружения,
+// возвращает ошибку, если какая-либо из переменных env не задана.
+func envs(envs ...string) (map[string]string, error) {
+	em := make(map[string]string, len(envs))
+	var ok bool
+	for _, env := range envs {
+		if em[env], ok = os.LookupEnv(env); !ok {
+			log.Println(em[env])
+			return nil, fmt.Errorf("environment variable %q must be set", env)
+		}
+	}
+	return em, nil
+}
+
+var ErrRetryExceeded = errors.New("connect DB: number of retries exceeded")
+
+func connectDB(connstr string, retries int, interval time.Duration) (storage.Storage, error) {
+
+	for i := 0; i < retries; i++ {
+		db, err := postgres.New(connstr)
+		if err != nil {
+			time.Sleep(interval)
+			continue
+		}
+		return db, nil
+	}
+
+	return nil, ErrRetryExceeded
 }
 
 // startWebsoketServer запускает websoket сервер
