@@ -69,7 +69,7 @@ func TestRate_UnmarshalXML(t *testing.T) {
 func TestRate_UnmarshalJSON(t *testing.T) {
 
 	got := struct {
-		Item BtcRate `json:"data"`
+		Item JsonRate `json:"data"`
 	}{}
 
 	err := json.NewDecoder(strings.NewReader(jblob)).Decode(&got)
