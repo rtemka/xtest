@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS fiats (
 CREATE TABLE IF NOT EXISTS btc_usdt (
     id BIGSERIAL PRIMARY KEY,
     time BIGINT CHECK(time > 0) DEFAULT extract(epoch from now()),
-    value NUMERIC(20, 4) NOT NULL
+    value NUMERIC(20, 4) NOT NULL,
+    UNIQUE(time)
 );
 
 CREATE TABLE IF NOT EXISTS rub (

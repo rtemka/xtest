@@ -83,16 +83,15 @@ func (p *Postgres) BtcRate(ctx context.Context, filter storage.Filter) ([]domain
 		stmt.sql = fmt.Sprintf(`
 		SELECT btc.id, btc.time, btc.value
 		FROM btc_usdt as btc 
-		JOIN (SELECT btc_usdt.time FROM btc_usdt WHERE btc_usdt.time %s $%d %s OFFSET $%d) 
-		as btc_offset ON btc.time = btc_offset.time;`,
+		JOIN (SELECT btc_usdt.id FROM btc_usdt WHERE btc_usdt.time %s $%d %s OFFSET $%d) 
+		as btc_offset ON btc.id = btc_offset.id ORDER BY btc.id DESC;`,
 			filter.Operator, len(stmt.args)+1, limit, len(stmt.args)+2)
 
 		stmt.args = append(stmt.args, filter.Time, filter.Offset)
 	} else {
 		stmt.sql = fmt.Sprintf(`
-		SELECT btc.id, btc.time, btc.value FROM btc_usdt as btc 
-		JOIN (SELECT btc_usdt.time FROM btc_usdt %s OFFSET $%d) as btc_offset 
-		ON btc.time = btc_offset.time;`, limit, len(stmt.args)+1)
+		SELECT btc.id, btc.time, btc.value FROM btc_usdt as btc
+		ORDER BY btc.id DESC %s OFFSET $%d;`, limit, len(stmt.args)+1)
 		stmt.args = append(stmt.args, filter.Offset)
 	}
 	return p.btcrate(ctx, stmt.sql, stmt.args...)
@@ -138,6 +137,10 @@ func (p *Postgres) FiatsCurrent(ctx context.Context) ([]domain.Rate, error) {
 // кол-во из таблицы курса фиатных валют.
 func (p *Postgres) Fiats(ctx context.Context, filter storage.Filter) ([]domain.Rate, error) {
 	var stmt statement
+	stmt.sql = `
+		SELECT rub.id, fiats.char_code, fiats.nominal, rub.time, rub.value	
+		FROM rub JOIN fiats ON rub.char_code = fiats.char_code
+	`
 
 	if filter.Time > 0 {
 		stmt.args = append(stmt.args, filter.Time)
