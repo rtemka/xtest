@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"log"
 	"net/url"
 	"os"
@@ -13,7 +12,7 @@ import (
 	ws "github.com/gorilla/websocket"
 )
 
-var addr = flag.String("addr", "localhost:8080", "ws service address")
+const serverAddr = "SERVER_URL"
 
 const (
 	retries       = 1000
@@ -44,12 +43,15 @@ func connect(url url.URL, retries int, interval time.Duration) (*ws.Conn, error)
 }
 
 func main() {
-	flag.Parse()
+	addr := os.Getenv(serverAddr)
+	if addr == "" {
+		log.Fatalf("environment variable %q must be set", serverAddr)
+	}
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
 	log.SetPrefix("[ws CLIENT]: ")
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/"}
+	u := url.URL{Scheme: "ws", Host: addr, Path: "/"}
 
 	c, err := connect(u, retries, retryInterval)
 	if err != nil {
