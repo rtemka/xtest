@@ -34,15 +34,11 @@ const (
 	crbPollInterval = 24 * time.Hour                                               // интервал опроса курса фиатных валют
 )
 
-const (
-	logIndent = 17
-)
-
 // имя подсистемы для логирования
 var (
-	restAPIName   = fmt.Sprintf("%*s", logIndent, "[REST API]: ")
-	wsAPIName     = fmt.Sprintf("%*s", logIndent, "[WEBSOCKET API]: ")
-	errLoggerName = fmt.Sprintf("%*s", logIndent, "[ERROR]: ")
+	restAPIName   = "[REST API]: "
+	wsAPIName     = "[WEBSOCKET API]: "
+	errLoggerName = "[ERROR]: "
 )
 
 func main() {
@@ -79,7 +75,7 @@ func main() {
 	crbRates, crbErrs := domain.DecodeStream(crb, domain.XmlDec)
 	// обрабатываем десериализованные данные
 	repls, procErrs := rates.ProcessStream(ctx, db, btcRates, rates.BtcProcessFunc)
-	_, procCrbErrs := rates.ProcessStream(ctx, db, crbRates, rates.BtcProcessFunc)
+	_, procCrbErrs := rates.ProcessStream(ctx, db, crbRates, rates.FiatProcessFunc)
 
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -109,7 +105,7 @@ func cancelation(cancel context.CancelFunc, logout io.Writer, servers []*http.Se
 	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		s := <-stop // получили сигнал прерывания
-		fmt.Fprintf(logout, "got os signal %q", s)
+		fmt.Fprintf(logout, "got os signal %q\n", s)
 
 		// закрываем серверы
 		for i := range servers {
