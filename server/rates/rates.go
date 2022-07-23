@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"xtestserver/domain"
 	"xtestserver/pkg/storage"
 )
@@ -57,13 +58,13 @@ func FiatProcessFunc(db stor, _ chan<- []byte, errs chan<- error) processor {
 func BtcProcessFunc(db stor, out chan<- []byte, errs chan<- error) processor {
 	// ship упаковывает данные, сериализует и отправляет
 	// в канал, если ошибка сериализации, то ошибка в канал ошибок
-	ship := func(label string, data any) {
+	ship := func(label string, m map[string]any) {
 		box := struct {
-			Label string
-			Data  any
+			Label string         `json:"label"`
+			Data  map[string]any `json:"data"`
 		}{
 			Label: label,
-			Data:  data,
+			Data:  m,
 		}
 		b, err := json.Marshal(box)
 		if err == nil {
@@ -80,7 +81,20 @@ func BtcProcessFunc(db stor, out chan<- []byte, errs chan<- error) processor {
 		}
 	}
 
-	calc := func(ctx context.Context, r rate) []rate {
+	// isNew сравнивает текущее значение BTC/USD с предыдущим
+	isNew := func(ctx context.Context, new float64) bool {
+		old, err := db.BtcRate(ctx, storage.Filter{Limit: 1})
+		if err != nil {
+			errs <- err
+			return true
+		}
+		if len(old) == 0 {
+			return true
+		}
+		return !floatEqual(old[0].Value, new) // если не равны
+	}
+
+	calc := func(ctx context.Context, r rate) map[string]any {
 		rates, err := CalcRates(ctx, db, r.Value)
 		if err != nil {
 			errs <- fmt.Errorf("process btc update stream: %w", err)
@@ -93,14 +107,17 @@ func BtcProcessFunc(db stor, out chan<- []byte, errs chan<- error) processor {
 		if len(r) == 0 {
 			return
 		}
-		go upd(ctx, r[0])
-		ship("BTC/USDT", r[0])
-		ship("BTC/*", calc(ctx, r[0]))
+
+		if isNew(ctx, r[0].Value) {
+			go upd(ctx, r[0])
+			ship("BTC/USDT", domain.RateMapTimestamp(r))
+			ship("BTC/*", calc(ctx, r[0]))
+		}
 	}
 }
 
 // CalcRates рассчитывает курс фиатных валют по отношению к BTC
-func CalcRates(ctx context.Context, db stor, btsusdt float64) ([]rate, error) {
+func CalcRates(ctx context.Context, db stor, btsusdt float64) (map[string]any, error) {
 	rub, err := db.RUBUSDRate(ctx) // получаем курс рубля к доллару
 	if err != nil {
 		return nil, err
@@ -112,12 +129,17 @@ func CalcRates(ctx context.Context, db stor, btsusdt float64) ([]rate, error) {
 	}
 
 	rcc := btsusdt * rub.Value // кросс-курс BTC/RUB
-
+	m := make(map[string]any, len(rates)+1)
+	m["RUB"] = rcc
 	for i := range rates {
 		if rates[i].Nominal != 0 {
 			// считаем кросс-курс валют к биткоину через рубль :)
-			rates[i].Value = rcc * float64(rates[i].Nominal) / rates[i].Value
+			m[rates[i].CharCode] = rcc * float64(rates[i].Nominal) / rates[i].Value
 		}
 	}
-	return rates, nil
+	return m, nil
+}
+
+func floatEqual(a, b float64) bool {
+	return math.Abs(a-b) <= 1e-9
 }

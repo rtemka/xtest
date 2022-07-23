@@ -3,7 +3,6 @@ package rates
 import (
 	"context"
 	"encoding/json"
-	"math"
 	"testing"
 	"time"
 	"xtestserver/pkg/storage/memdb"
@@ -83,7 +82,7 @@ func TestProcessStream(t *testing.T) {
 			if c.Data[i].CharCode != testBox2.Data[i].CharCode &&
 				c.Data[i].Nominal != testBox2.Data[i].Nominal &&
 				c.Data[i].Time != testBox2.Data[i].Time &&
-				!fequal(c.Data[i].Value, testBox2.Data[i].Value) {
+				!floatEqual(c.Data[i].Value, testBox2.Data[i].Value) {
 				t.Errorf("ProcessStream() = %v, want %v", c.Data[i], testBox2.Data[i])
 			}
 		}
@@ -92,8 +91,4 @@ func TestProcessStream(t *testing.T) {
 	}
 
 	<-done
-}
-
-func fequal(a, b float64) bool {
-	return math.Abs(a-b) <= 1e-9
 }
