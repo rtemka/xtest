@@ -45,6 +45,19 @@ func (db *MemDB) FiatsCurrent(_ context.Context) ([]item, error) {
 	return []item{SampleItem, SampleItem2, SampleItem3}, nil
 }
 
+// Fiats - возвращает столько Rate, сколько запрошено в фильтре
+// или просто три элемента
+func (db *MemDB) Fiats(_ context.Context, filter storage.Filter) ([]item, error) {
+	if filter.Limit+filter.Offset == 0 {
+		return []item{SampleItem, SampleItem2, SampleItem3}, nil
+	}
+	items := make([]item, 0, filter.Limit+filter.Offset)
+	for i := 0; i < filter.Limit+filter.Offset; i++ {
+		items = append(items, SampleItem)
+	}
+	return items, nil
+}
+
 // Close - no-op
 func (db *MemDB) Close() error {
 	return nil
