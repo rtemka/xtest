@@ -67,7 +67,6 @@ func main() {
 			if err != nil {
 				if ws.IsCloseError(err, ws.CloseNormalClosure) {
 					log.Println("read:", err)
-					break
 				}
 				if ws.IsUnexpectedCloseError(err, ws.CloseGoingAway,
 					ws.CloseAbnormalClosure, ws.CloseInternalServerErr,
@@ -83,9 +82,13 @@ func main() {
 					}
 					continue
 				}
+				break
 			}
 
-			log.Printf("recv: %s", message)
+			if len(message) > 0 {
+				log.Printf("recv: %s", message)
+			}
+
 		}
 	}()
 
