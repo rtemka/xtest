@@ -60,14 +60,20 @@ func main() {
 	defer c.Close()
 
 	done := make(chan struct{})
+
 	go func() {
 		defer close(done)
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
+				// если соединение было закрыто нормально с нашей
+				// или со стороны сервера, то выходим
 				if ws.IsCloseError(err, ws.CloseNormalClosure) {
 					log.Println("read:", err)
+					return
 				}
+				// если случилась непредвиденная ошибка соединения,
+				// мы пытаемся переподключиться
 				if ws.IsUnexpectedCloseError(err, ws.CloseGoingAway,
 					ws.CloseAbnormalClosure, ws.CloseInternalServerErr,
 					ws.CloseServiceRestart, ws.CloseTryAgainLater) {
@@ -75,14 +81,12 @@ func main() {
 					log.Printf("error: %v", err)
 					log.Println("trying to reconnect")
 
-					c.Close()
+					_ = c.Close()
 					c, err = connect(u, retries, retryInterval)
 					if err != nil {
 						log.Fatal(err)
 					}
-					continue
 				}
-				break
 			}
 
 			if len(message) > 0 {
@@ -97,11 +101,16 @@ func main() {
 
 	select {
 	case <-done:
+		return
 	case s := <-stop:
 		log.Printf("got os signal %q", s)
 		err = c.WriteMessage(ws.CloseMessage, ws.FormatCloseMessage(ws.CloseNormalClosure, ""))
 		if err != nil {
 			log.Println("write close:", err)
+		}
+		select {
+		case <-done:
+		case <-time.After(time.Second):
 		}
 	}
 }
