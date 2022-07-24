@@ -1,3 +1,4 @@
+// Пакет postgres представляет релизацию контракта БД.
 package postgres
 
 import (
@@ -223,10 +224,10 @@ func (p *Postgres) exec(ctx context.Context, sql string, args ...any) error {
 	return tx.Commit(ctx)
 }
 
-// execBatch is helper function, runs
-// multiple batch queries *pgx.conn.Exec()
-// in one transaction. This queries must be ones
-// that don't return results (INSERT, UPDATE, DELETE).
+// execBatch вспомогательная функция, выполняет
+// множественные запросы *pgx.conn.Exec()
+// в одной транзакции. Эти запросы не возвращают
+// результатов (INSERT, UPDATE, DELETE).
 func (p *Postgres) execBatch(ctx context.Context, stmts ...statement) error {
 
 	b := new(pgx.Batch)

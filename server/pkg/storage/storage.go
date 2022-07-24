@@ -5,12 +5,13 @@ import (
 	"xtestserver/domain"
 )
 
+// Filter - фильтр для запросов БД.
 type Filter struct {
-	Operator string
-	Currency string
+	Operator string // ['<=' '>=' '=']
+	Currency string // ['USD' 'BLR' 'HUF'...]
 	Limit    int
 	Offset   int
-	Time     int64
+	Time     int64 // UNIX timestamp
 }
 
 // Storage - контракт реализуемый базой данных.
