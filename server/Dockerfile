@@ -11,7 +11,7 @@ RUN go mod tidy
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o ./cmd/server ./cmd/main.go
 
-FROM alpine:latest
+FROM alpine:3.16.1
 
 WORKDIR /app
 
