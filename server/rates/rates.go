@@ -1,3 +1,4 @@
+// пакет rates реализовывает логику обработки курсов валют
 package rates
 
 import (
@@ -140,6 +141,7 @@ func CalcRates(ctx context.Context, db stor, btsusdt float64) (map[string]any, e
 	return m, nil
 }
 
+// floatEqual - равны ли float64 приблизительно?:)
 func floatEqual(a, b float64) bool {
 	return math.Abs(a-b) <= 1e-9
 }
