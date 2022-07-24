@@ -1,3 +1,5 @@
+// Пакет poller предоставляет функционал интервального опроса
+// ресурса по сети.
 package poller
 
 import (
@@ -8,6 +10,8 @@ import (
 	"time"
 )
 
+// Poll - опрашивает переданную url-ссылку
+// с заданным интервалом и отдает байты тела ответа в канал.
 func Poll(ctx context.Context, url string, interval time.Duration) (<-chan []byte, <-chan error) {
 
 	out := make(chan []byte)
@@ -45,6 +49,8 @@ func Poll(ctx context.Context, url string, interval time.Duration) (<-chan []byt
 	return out, errs
 }
 
+// request - вспомогательная функция, выполняющая обращение
+// к ресурсу с таймаутом.
 func request(ctx context.Context, url string) ([]byte, error) {
 	c, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
