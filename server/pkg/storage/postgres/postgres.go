@@ -151,7 +151,7 @@ func (p *Postgres) Fiats(ctx context.Context, filter storage.Filter) ([]domain.R
 		as rub_offset ON rub.id = rub_offset.id
 		JOIN fiats ON rub.char_code = fiats.char_code`, filter.Operator)
 		if filter.Currency != "" {
-			stmt.sql += " WHERE fiats.char_code = $2;"
+			stmt.sql += " WHERE fiats.char_code = $2"
 			stmt.args = append(stmt.args, filter.Currency)
 		}
 	}
