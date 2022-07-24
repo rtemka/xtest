@@ -64,7 +64,7 @@ type xmlContainer struct {
 	Items []Rate `xml:"Valute"`
 }
 
-// RateMap превращает слайс Rate в map
+// RateMap превращает слайс Rate в map.
 func RateMap(rates []Rate) map[string]any {
 	m := make(map[string]any, len(rates))
 	for i := range rates {
@@ -73,6 +73,7 @@ func RateMap(rates []Rate) map[string]any {
 	return m
 }
 
+// RateMap превращает слайс Rate в map с таймстампом.
 func RateMapTimestamp(rates []Rate) map[string]any {
 	m := make(map[string]any, len(rates))
 	for i := range rates {
@@ -161,20 +162,3 @@ func xmlDecoderWithSettings(r io.Reader) *xml.Decoder {
 	decoder.CharsetReader = charset.NewReaderLabel // некоторые возвращают не UTF-8
 	return decoder
 }
-
-// func (r *Rates) marshalJSONCurrLatest() ([]byte, error) {
-// 	m := make(map[string]any, 1)
-// 	m[r.CharCode] = r.Value
-// 	return json.Marshal(m)
-// }
-
-// func (r *Rate) MarshalJSON() ([]byte, error) {
-// 	switch r.Mode {
-// 	case BtcHistory:
-// 		return r.marshalJSONBtcHistory()
-// 	case CurrLatest:
-// 		return r.marshalJSONCurrLatest()
-// 	default:
-// 		return json.Marshal(r)
-// 	}
-// }
