@@ -85,6 +85,7 @@ func (api *API) updater(ctx context.Context) {
 			return
 		case u, ok := <-api.upd:
 			if !ok {
+				close(api.done)
 				return
 			}
 			if api.clients.len() != 0 {
