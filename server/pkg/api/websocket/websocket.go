@@ -83,7 +83,10 @@ func (api *API) updater(ctx context.Context) {
 		case <-ctx.Done():
 			close(api.done)
 			return
-		case u := <-api.upd:
+		case u, ok := <-api.upd:
+			if !ok {
+				return
+			}
 			if api.clients.len() != 0 {
 				api.broadcast(u)
 			}
