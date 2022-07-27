@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.18-buster As build
+FROM golang:1.18-alpine3.16 As build
 LABEL version="1.0.0" maintainer="Artem Rybakov<rybakov333@gmail.com>" 
 
 WORKDIR /go/src/github.com/rtemka/xtest
