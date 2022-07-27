@@ -24,10 +24,10 @@ import (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("error loading .env file")
-	}
+	// игнорируем ошибку т.к переменные окружения
+	// могут быть предоставлены из оболочки или
+	// через docker
+	_ = godotenv.Load()
 }
 
 // переменная окружения
