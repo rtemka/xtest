@@ -26,7 +26,7 @@ func TestAPI_clientHandler(t *testing.T) {
 	ts := httptest.NewServer(api.Router())
 	defer ts.Close()
 
-	var clients []*websocket.Conn
+	var clients = make([]*websocket.Conn, 0, howManyClients)
 
 	for i := 0; i < howManyClients; i++ {
 		u := url.URL{Scheme: "ws", Host: strings.TrimPrefix(ts.URL, "http://"), Path: "/"}
@@ -38,27 +38,20 @@ func TestAPI_clientHandler(t *testing.T) {
 		clients = append(clients, c)
 	}
 
-	defer func() {
-		for i := range clients {
-			_ = clients[i].Close()
-		}
-	}()
-
 	sended := "update"
-	for i := 0; i < howManyMessages; i++ {
-		ch <- []byte(sended)
-	}
-	close(ch)
 
 	var wg sync.WaitGroup
 	wg.Add(len(clients))
+	var wg2 sync.WaitGroup
+	wg2.Add(len(clients))
 
-	var mu sync.Mutex
 	var count int
+	var mu sync.Mutex
 
 	for i := range clients {
 		go func(idx int) {
-			defer wg.Done()
+			wg.Done()
+			defer wg2.Done()
 			for i := 0; i < howManyMessages; i++ {
 				mt, received, err := clients[idx].ReadMessage()
 				if err != nil {
@@ -77,8 +70,16 @@ func TestAPI_clientHandler(t *testing.T) {
 		}(i)
 	}
 
-	cancel()
-	wg.Wait()
+	wg.Wait() // все клиенты готовы читать
+	for i := 0; i < howManyMessages; i++ {
+		ch <- []byte(sended)
+	}
+	close(ch)
+	wg2.Wait() // все клиенты прочитали
+
+	for i := range clients {
+		_ = clients[i].Close()
+	}
 
 	if count != howManyClients*howManyMessages {
 		t.Fatalf("clientHandler() total messages = %d, want %d", count, howManyClients*howManyMessages)
