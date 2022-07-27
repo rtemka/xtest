@@ -214,7 +214,9 @@ func (p *Postgres) exec(ctx context.Context, sql string, args ...any) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	_, err = p.db.Exec(ctx, sql, args...)
 	if err != nil {

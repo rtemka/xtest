@@ -9,9 +9,18 @@ import (
 	"testing"
 	"xtestserver/domain"
 	"xtestserver/pkg/storage"
+
+	"github.com/joho/godotenv"
 )
 
-const tdbEnv = "RATES_TEST_DB"
+func init() {
+	err := godotenv.Load("test.env")
+	if err != nil {
+		log.Fatal("error loading .env file")
+	}
+}
+
+const tdbEnv = "TEST_DB"
 
 var tdb *Postgres
 
@@ -26,8 +35,8 @@ func restoreDB(tdb *Postgres) error {
 
 func TestMain(m *testing.M) {
 
-	connstr := os.Getenv(tdbEnv)
-	if connstr == "" {
+	connstr, ok := os.LookupEnv(tdbEnv)
+	if !ok {
 		fmt.Fprintf(os.Stderr, "environment variable %q must be set\n", tdbEnv)
 		os.Exit(m.Run()) // tests will be skipped
 	}
@@ -206,8 +215,9 @@ func TestPostgres(t *testing.T) {
 }
 
 var testBtcRate1 = domain.Rate{Id: 1, Time: 1658252361, Value: 22278.20}
-var testBtcRate2 = domain.Rate{Id: 2, Time: 1658252362, Value: 22378.20}
 var testBtcRate3 = domain.Rate{Id: 3, Time: 1658252363, Value: 11111.10}
+
+// var testBtcRate2 = domain.Rate{Id: 2, Time: 1658252362, Value: 22378.20}
 
 var testFiatRate1 = domain.Rate{Id: 1, CharCode: "USD", Nominal: 1, Time: 1658252361, Value: 22278.20}
 var testFiatRate2 = domain.Rate{Id: 2, CharCode: "HUF", Nominal: 100, Time: 1658252361, Value: 32378.20}
