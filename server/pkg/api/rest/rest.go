@@ -21,7 +21,6 @@ import (
 
 type stor = storage.Storage
 type filter = storage.Filter
-type item = domain.Rate
 
 const (
 	dateTimeFilter = "date"
@@ -110,7 +109,7 @@ func (api *API) btcusdtLatestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	m := domain.RateMapTimestamp(latest)
 	// Отправка данных клиенту в формате JSON.
-	json.NewEncoder(w).Encode(&m)
+	_ = json.NewEncoder(w).Encode(&m)
 }
 
 // btcusdtHistoryHandler возвращает
@@ -151,7 +150,7 @@ func (api *API) btcusdtHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		History: history,
 	}
 	// Отправка данных клиенту в формате JSON.
-	json.NewEncoder(w).Encode(&box)
+	_ = json.NewEncoder(w).Encode(&box)
 }
 
 // fiatsRubLatestHandler возвращает последние
@@ -172,7 +171,7 @@ func (api *API) fiatsRubLatestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	m := domain.RateMap(latest)
 	// Отправка данных клиенту в формате JSON.
-	json.NewEncoder(w).Encode(&m)
+	_ = json.NewEncoder(w).Encode(&m)
 }
 
 // fiatsRubLatestHandler возвращает историю изменения фиатных валют
@@ -222,7 +221,7 @@ func (api *API) fiatsRubHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка данных клиенту в формате JSON.
-	json.NewEncoder(w).Encode(&box)
+	_ = json.NewEncoder(w).Encode(&box)
 }
 
 // fiatsBTCLatestHandler возвращает последние
@@ -246,7 +245,7 @@ func (api *API) fiatsBTCLatestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка данных клиенту в формате JSON.
-	json.NewEncoder(w).Encode(&rates)
+	_ = json.NewEncoder(w).Encode(&rates)
 }
 
 func op(o string) string {
