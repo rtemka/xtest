@@ -39,7 +39,6 @@ func Poll(ctx context.Context, url string, interval time.Duration) (<-chan []byt
 			case <-time.After(interval):
 				poll()
 			case <-ctx.Done():
-				errs <- ctx.Err()
 				return
 			}
 		}
