@@ -17,7 +17,7 @@ services:
       - "8080:8080" # REST API
       - "8090:8090" # WEBSOCKET SERVER
     environment:
-      - POSTGRES_DB_URL=postgres://xuser:xuser123@pgsql:5432/xtest
+      - DB_URL=postgres://xuser:xuser123@pgsql:5432/xtest
       - LOG_FILE=/var/log/xserver.log
     volumes:
       - logvolume01:/var/log
