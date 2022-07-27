@@ -19,11 +19,20 @@ import (
 	"xtestserver/pkg/storage"
 	"xtestserver/pkg/storage/postgres"
 	"xtestserver/rates"
+
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("error loading .env file")
+	}
+}
 
 // переменная окружения
 const (
-	dbConnStrEnv = "POSTGRES_DB_URL"
+	dbConnStrEnv = "DB_URL"
 	logfileEnv   = "LOG_FILE"
 )
 

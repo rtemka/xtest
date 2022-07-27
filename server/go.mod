@@ -6,6 +6,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/jackc/pgx/v4 v4.16.1
+	github.com/joho/godotenv v1.4.0
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
 )
 
