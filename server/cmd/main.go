@@ -113,8 +113,12 @@ func cancelation(cancel context.CancelFunc, logout io.Writer, servers []*http.Se
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
-		s := <-stop // получили сигнал прерывания
-		fmt.Fprintf(logout, "got os signal %q\n", s)
+		sig := <-stop // получили сигнал прерывания
+		t := time.Now().UTC()
+		yy, mm, dd := t.Date()
+		h, m, s := t.Clock()
+		fmt.Fprintf(logout, "%04d/%02d/%02d %02d:%02d:%02d [MAIN]: got signal %q\n",
+			yy, mm, dd, h, m, s, sig)
 
 		// закрываем серверы
 		for i := range servers {
@@ -175,6 +179,7 @@ func startWebsoketServer(ctx context.Context, logout io.Writer, upd <-chan []byt
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Println(err)
 		}
+		logger.Println("server is shut down")
 		wg.Done()
 	}()
 	return srv
@@ -199,6 +204,7 @@ func startRestServer(db storage.Storage, logout io.Writer, wg *sync.WaitGroup) *
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Println(err)
 		}
+		logger.Println("server is shut down")
 		wg.Done()
 	}()
 	return srv
